@@ -1,0 +1,303 @@
+C1. Write a program in solidity to create Student data. Use the following constructs:
+• Structures
+• Arrays
+• Fallback
+Deploy this as smart contract on Ethereum and Observe the transaction fee and Gas values.
+
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract StudentData {
+    struct Student {
+        string name;
+        uint age;
+        string course;
+        uint studentId;
+    }
+
+    Student[] public students;
+    mapping(uint => uint) public studentIdToIndex;
+
+    fallback() external payable {
+        revert("Fallback function called, no direct ether transfers allowed.");
+    }
+
+    function addStudent(string memory _name, uint _age, string memory _course, uint _studentId) public {
+        require(studentIdToIndex[_studentId] == 0, "Student ID already exists!");
+        Student memory newStudent = Student({
+            name: _name,
+            age: _age,
+            course: _course,
+            studentId: _studentId
+        });
+        students.push(newStudent);
+        studentIdToIndex[_studentId] = students.length;
+    }
+
+    function getStudentById(uint _studentId) public view returns (string memory, uint, string memory, uint) {
+        uint index = studentIdToIndex[_studentId];
+        require(index > 0, "Student ID does not exist!");
+        Student memory s = students[index - 1];
+        return (s.name, s.age, s.course, s.studentId);
+    }
+
+    function getTotalStudents() public view returns (uint) {
+        return students.length;
+    }
+
+    receive() external payable {
+        revert("Direct ether transfer not allowed.");
+    }
+}
+
+
+C2. Write a program in solidity to create Employee data. Use the following constructs:
+• Structures
+• Arrays
+• Fallback
+Deploy this as smart contract on Ethereum and Observe the transaction fee and Gas values.
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract EmployeeData {
+    // Structure to hold employee information
+    struct Employee {
+        string name;
+        uint age;
+        string position;
+        uint employeeId;
+    }
+
+    // Array to store employees
+    Employee[] public employees;
+
+    // Mapping to track employee ID to index in the employees array
+    mapping(uint => uint) private employeeIdToIndex;
+
+    // Fallback function to prevent direct Ether transfers
+    fallback() external {
+        revert("Direct Ether transfers are not allowed!");
+    }
+
+    // Function to add a new employee
+    function addEmployee(string memory _name, uint _age, string memory _position, uint _employeeId) public {
+        require(employeeIdToIndex[_employeeId] == 0, "Employee ID already exists!");
+
+        // Create a new employee and add it to the array
+        employees.push(Employee(_name, _age, _position, _employeeId));
+        
+        // Map employee ID to the index in the array (index + 1 to avoid zero mapping)
+        employeeIdToIndex[_employeeId] = employees.length; 
+    }
+
+    // Function to retrieve an employee by ID
+    function getEmployeeById(uint _employeeId) public view returns (string memory, uint, string memory) {
+        uint index = employeeIdToIndex[_employeeId];
+        require(index > 0, "Employee ID does not exist!");
+
+        // Retrieve the employee information
+        Employee memory e = employees[index - 1]; // Adjust for zero indexing
+        return (e.name, e.age, e.position);
+    }
+
+    // Function to get the total number of employees
+    function getTotalEmployees() public view returns (uint) {
+        return employees.length;
+    }
+}
+
+C3. Write a smart contract on a test network, for Bank account of a customer for following operations:
+1)	Deposit money 2) Withdraw Money 3) Show balance
+
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract BankAccount {
+    // Mapping to store the balances of each customer's account
+    mapping(address => uint256) private balances;
+
+    // Event to log deposits
+    event Deposited(address indexed customer, uint256 amount);
+    
+    // Event to log withdrawals
+    event Withdrawn(address indexed customer, uint256 amount);
+    
+    // Function to deposit money into the account
+    function deposit() public payable {
+        require(msg.value > 0, "Deposit amount must be greater than 0");
+        
+        // Increase the customer's balance
+        balances[msg.sender] += msg.value;
+
+        // Emit a deposit event
+        emit Deposited(msg.sender, msg.value);
+    }
+
+    // Function to withdraw money from the account
+    function withdraw(uint256 amount) public {
+        require(amount > 0, "Withdrawal amount must be greater than 0");
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+
+        // Decrease the customer's balance
+        balances[msg.sender] -= amount;
+
+        // Transfer the specified amount to the customer
+        payable(msg.sender).transfer(amount);
+
+        // Emit a withdrawal event
+        emit Withdrawn(msg.sender, amount);
+    }
+
+    // Function to show the balance of the account
+    function showBalance() public view returns (uint256) {
+        return balances[msg.sender];
+    }
+}
+
+
+C4. Write a smart contract on a test network, for product inventory including following operations:
+1)	Receive Product 2) Sale product 3) Display Stock
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract ProductInventory {
+    
+    // Structure to represent a product
+    struct Product {
+        uint256 productId;
+        string name;
+        uint256 price; // price in Wei (smallest unit of Ether)
+        uint256 quantity;
+    }
+
+    // Mapping to store products with their ID as key
+    mapping(uint256 => Product) public products;
+
+    // Counter for product IDs
+    uint256 public productCount = 0;
+
+    // Event to log when a product is received
+    event ProductReceived(uint256 productId, string name, uint256 quantity, uint256 price);
+
+    // Event to log when a product is sold
+    event ProductSold(uint256 productId, string name, uint256 quantity, uint256 totalPrice);
+
+    // Function to receive new products or add stock to an existing product
+    function receiveProduct(string memory _name, uint256 _price, uint256 _quantity) public {
+        require(_quantity > 0, "Quantity must be greater than zero");
+        require(_price > 0, "Price must be greater than zero");
+
+        // Create new product or update existing product
+        productCount++;
+        products[productCount] = Product(productCount, _name, _price, _quantity);
+
+        // Emit an event for product received
+        emit ProductReceived(productCount, _name, _quantity, _price);
+    }
+
+    // Function to sell a product
+   function sellProduct(uint256 _productId, uint256 _quantity) public payable {
+    require(_quantity > 0, "Quantity must be greater than zero");
+    Product storage product = products[_productId];
+    require(product.quantity >= _quantity, "Not enough stock available");
+    uint256 totalPrice = _quantity * product.price;
+    require(msg.value >= totalPrice, "Insufficient payment");
+
+    // Deduct the quantity sold
+    product.quantity -= _quantity;
+
+    // Excess payment is not refunded here, so be sure to only send exact amounts
+
+    // Emit an event for product sold
+    emit ProductSold(_productId, product.name, _quantity, totalPrice);
+}
+
+    // Function to display stock of a specific product
+    function displayStock(uint256 _productId) public view returns (string memory name, uint256 price, uint256 quantity) {
+        Product memory product = products[_productId];
+        return (product.name, product.price, product.quantity);
+    }
+
+    // Function to display all available products and their stock
+    function displayAllProducts() public view returns (Product[] memory) {
+        Product[] memory allProducts = new Product[](productCount);
+        for (uint256 i = 1; i <= productCount; i++) {
+            allProducts[i - 1] = products[i];
+        }
+        return allProducts;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+C5. Write a program in solidity to create Customer data. Use the following constructs:
+• Structures
+• Arrays
+• Fallback
+Deploy this as smart contract on Ethereum and Observe the transaction fee and Gas values.
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract CustomerData {
+    
+    // Defining a structure to store customer information
+    struct Customer {
+        uint256 customerId;
+        string name;
+        uint256 age;
+        string email;
+    }
+
+    // Array to store multiple customers
+    Customer[] public customers;
+
+    // Mapping to keep track of the customer's existence by customerId
+    mapping(uint256 => bool) public customerExists;
+
+    // Event to emit when a new customer is added
+    event CustomerAdded(uint256 customerId, string name, uint256 age, string email);
+
+    // Function to add a new customer to the system
+    function addCustomer(uint256 _customerId, string memory _name, uint256 _age, string memory _email) public {
+        require(!customerExists[_customerId], "Customer ID already exists!");
+        Customer memory newCustomer = Customer({
+            customerId: _customerId,
+            name: _name,
+            age: _age,
+            email: _email
+        });
+        customers.push(newCustomer);
+        customerExists[_customerId] = true;
+        emit CustomerAdded(_customerId, _name, _age, _email);
+    }
+
+    // Function to retrieve customer details by index in the array
+    function getCustomer(uint256 index) public view returns (uint256, string memory, uint256, string memory) {
+        require(index < customers.length, "Invalid index!");
+        Customer memory customer = customers[index];
+        return (customer.customerId, customer.name, customer.age, customer.email);
+    }
+
+    // Fallback function to handle any Ether sent to the contract
+    fallback() external payable {
+        // You can add logic here, e.g., reverting transactions if not meant to send Ether
+    }
+
+    // Function to check contract balance
+    function getContractBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
+}

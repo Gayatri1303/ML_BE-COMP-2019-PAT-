@@ -1,0 +1,62 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+
+
+df = pd.read_csv('sales_data_sample.csv', encoding='latin')
+
+df
+
+df.describe()
+
+df.head()
+
+df.tail()
+
+
+#Relevant numeric features for clustering
+df_cluster = df[['SALES', 'QUANTITYORDERED', 'PRICEEACH']]
+scaler = StandardScaler()
+df_scaled = scaler.fit_transform(df_cluster)
+
+
+#Finding optimal number of clusters
+
+wcss = [] 
+k_values = range(1, 11)
+
+for k in k_values:
+    kmeans = KMeans(n_clusters=k, init='k-means++', random_state=42)
+    kmeans.fit(df_scaled)
+    wcss.append(kmeans.inertia_)  
+
+
+
+plt.figure(figsize=(8, 5))
+plt.plot(k_values, wcss, marker='o', linestyle='--')
+plt.title('Elbow Method to Determine Optimal Number of Clusters')
+plt.xlabel('Number of Clusters (K)')
+plt.ylabel('WCSS')
+plt.show()
+
+
+
+optimal_k = 3
+kmeans = KMeans(n_clusters=optimal_k, init='k-means++', random_state=42)
+y_kmeans = kmeans.fit_predict(df_scaled)
+df['Cluster'] = y_kmeans
+print(df[['SALES', 'QUANTITYORDERED', 'PRICEEACH', 'Cluster']].head())
+
+
+
+
+plt.figure(figsize=(8, 5)) 
+plt.scatter(df_scaled[:, 0], df_scaled[:, 1], c=y_kmeans, cmap='viridis') 
+plt.title(f'K-Means Clustering with {optimal_k} Clusters') 
+plt.xlabel('Feature 1: SALES') 
+plt.ylabel('Feature 2: QUANTITYORDERED') 
+plt.show()
+  
